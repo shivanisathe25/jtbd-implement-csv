@@ -10,9 +10,7 @@ Automates the creation of missing documentation files (assemblies and modules) b
 
 - **Claude Code** installed and configured
 - **JTBD CSV mapping file** in format: `Job Mapping for Category template.csv`
-- **Product documentation categories (1).md** - Category definitions and JTBD alignment
-- **JTBD consistency guidelines.md** - Style and structure guidelines
-- **Product documentation** (e.g., [Red Hat Ansible Automation Platform 2.6](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/))
+- **Red Hat product documentation repository** (to apply the skill to)
 
 ## Repository Structure
 
@@ -170,24 +168,36 @@ This section covers:
 1-2 sentence description
 ```
 
-## Resource Files
+## Resources Used by the Skill
 
-The skill uses these resources for guidance:
+The skill references these resources during execution to ensure JTBD compliance:
 
-1. **Product documentation categories (1).md**
-   - 15+ category definitions (What's new, Discover, Get started, etc.)
-   - JTBD-aligned framing ("When I want to...")
-   - Content type mapping
+### 1. Product Documentation Categories (1).md
+- **Purpose**: Defines 15+ product documentation categories
+- **Content**: 
+  - Category definitions (What's new, Discover, Get started, Plan, Install, Upgrade, Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, Optimize, Extend, Troubleshoot, Reference, Download PDF)
+  - JTBD-aligned framing ("When I want to...")
+  - Content type mapping for each category
+- **Usage**: Guides category selection and content organization
 
-2. **JTBD consistency guidelines.md**
-   - Use case metadata and taxonomy
-   - Heading style (imperatives vs gerunds)
-   - Navigation title best practices
-   - Outcome-based patterns
+### 2. JTBD Consistency Guidelines.md
+- **Purpose**: Ensures consistent JTBD implementation across products
+- **Content**:
+  - Use case metadata and taxonomy values
+  - Heading style guidelines (imperatives vs gerunds)
+  - Navigation title best practices
+  - Outcome-based heading patterns
+  - Title formatting rules (avoid "About", "Understanding", etc.)
+- **Usage**: Enforces style and structure compliance in generated files
 
-3. **Product Documentation**
-   - Reference structure examples
-   - Existing modules and assemblies
+### 3. Product Documentation Examples
+- **Purpose**: Reference implementation of JTBD structure
+- **Example**: [Red Hat Ansible Automation Platform 2.6](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/)
+- **Content**:
+  - Live examples of L1/L2/L3 structure
+  - Assembly and module organization
+  - AsciiDoc formatting patterns
+- **Usage**: Provides templates and patterns for file creation
 
 ## Example Output
 
