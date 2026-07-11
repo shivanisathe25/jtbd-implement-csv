@@ -63,7 +63,22 @@ Claude will then prompt you for:
 
 ## Workflow
 
-### 1. Prompt for CSV File
+### 1. Verify Documentation Repository
+
+Before starting, confirm the user is in a documentation repository:
+```bash
+git rev-parse --is-inside-work-tree 2>/dev/null
+```
+
+If not in a git repository, inform the user:
+```
+Please navigate to your documentation repository first:
+cd /path/to/your/docs-repo
+
+Then run /create-jobs again.
+```
+
+### 2. Prompt for CSV File
 
 Ask the user:
 ```
@@ -76,7 +91,7 @@ If no path provided, search:
 find ~/Downloads -name "*Job Mapping*" -o -name "*Category template*.csv" 2>/dev/null | head -5
 ```
 
-### 2. Prompt for Category
+### 3. Prompt for Category
 
 Ask the user:
 ```
@@ -86,7 +101,24 @@ Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, Optimize,
 Extend, Troubleshoot, Reference, Download PDF
 ```
 
-### 3. Parse CSV and Check Existing Files
+### 4. Create Git Branch
+
+Automatically create a new branch based on the category:
+```bash
+git checkout -b builds-{category-lowercase}-l2-topics main
+```
+
+Examples:
+- Category "Configure" → `builds-configure-l2-topics`
+- Category "Secure" → `builds-secure-l2-topics`
+- Category "Develop" → `builds-develop-l2-topics`
+
+Inform the user:
+```
+✓ Created branch: builds-{category}-l2-topics
+```
+
+### 5. Parse CSV and Check Existing Files
 
 Read the CSV for the specified category and extract:
 - **L1 jobs** (assembly-level parent topics)
@@ -100,7 +132,7 @@ test -f "modules/ob-{filename}.adoc" && echo "EXISTS" || echo "MISSING"
 test -f "assemblies/{filename}.adoc" && echo "EXISTS" || echo "MISSING"
 ```
 
-### 4. List Missing Files and Confirm
+### 6. List Missing Files and Confirm
 
 Display to user:
 ```
@@ -122,7 +154,7 @@ L3 (Topic modules):
 Do you want to create these files? (yes/no)
 ```
 
-### 5. Create Missing Files with docs-writer Agent
+### 7. Create Missing Files with docs-writer Agent
 
 If user confirms, for each missing file:
 
@@ -200,7 +232,7 @@ Format: AsciiDoc
 Output: Complete module skeleton with description
 ```
 
-### 6. Reorganize Existing Topics
+### 8. Reorganize Existing Topics
 
 After creating missing files:
 
@@ -230,10 +262,12 @@ include::modules/ob-security.adoc[leveloffset=+1]
 include::modules/topic-b.adoc[leveloffset=+2]
 ```
 
-### 7. Report Results and Request Review
+### 9. Report Results and Request Review
 
 Display summary:
 ```
+✓ Branch created: builds-{category}-l2-topics
+
 ✓ Files created:
   - {count} L1 assemblies
   - {count} L2 reference sections  
@@ -327,6 +361,8 @@ This section covers the following topics:
 
 ## Important Notes
 
+- **Run from docs repository**: User must be inside their documentation repository
+- **Creates branch automatically**: Pattern: `builds-{category-lowercase}-l2-topics`
 - **Auto-detect CSV**: Search ~/Downloads if path not provided
 - **Verify before creating**: Always confirm file list with user
 - **Use docs-writer agent**: For all abstracts and descriptions (professional quality)
@@ -339,6 +375,9 @@ This section covers the following topics:
 
 After running, verify:
 ```bash
+# Verify branch
+git branch --show-current
+
 # Check created assemblies
 ls assemblies/builds-*.adoc
 
@@ -354,6 +393,8 @@ grep -r "include::modules" assemblies/
 
 ## Troubleshooting
 
+- **Not in git repository**: Navigate to your docs repo before running `/create-jobs`
+- **Branch already exists**: Checkout or delete the existing branch first
 - **CSV not found**: Provide explicit path or copy to ~/Downloads
 - **Category not in CSV**: Check category spelling matches CSV exactly
 - **File already exists**: Skill will skip and report, not overwrite

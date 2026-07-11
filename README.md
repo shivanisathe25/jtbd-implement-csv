@@ -10,7 +10,8 @@ Automates the creation of missing documentation files (assemblies and modules) b
 
 - **Claude Code** installed and configured
 - **JTBD CSV mapping file** in format: `Job Mapping for Category template.csv`
-- **Red Hat product documentation repository** (to apply the skill to)
+- **Red Hat product documentation repository** cloned locally
+- **Active in documentation repository** - Navigate to your docs repo before running the skill
 
 ## Repository Structure
 
@@ -42,34 +43,54 @@ Automates the creation of missing documentation files (assemblies and modules) b
 
 ## Usage
 
-Navigate to your documentation project and run:
+**Important**: Navigate to your documentation repository first:
+```bash
+cd /path/to/your/docs-repo
+```
+
+Then run:
 ```
 /create-jobs
 ```
 
-Claude will then prompt you for:
-1. **CSV file path** - Job Mapping for Category template
-2. **Category name** - Which category to create/update
+The skill will:
+1. **Create a new branch** automatically (e.g., `builds-configure-l2-topics`)
+2. **Prompt for CSV file path** - Job Mapping for Category template
+3. **Prompt for category name** - Which category to create/update
+4. **Generate and organize** all L1/L2/L3 files on the new branch
 
 ## Workflow
 
-### Interactive Prompts
+### 1. Branch Creation (Automatic)
 
-1. **CSV File Location**
+The skill automatically creates a new branch based on the category:
+```bash
+git checkout -b builds-{category-lowercase}-l2-topics main
+```
+
+Examples:
+- Category "Configure" → `builds-configure-l2-topics`
+- Category "Secure" → `builds-secure-l2-topics`
+- Category "Develop" → `builds-develop-l2-topics`
+
+### 2. Interactive Prompts
+
+**CSV File Location**
    ```
    Please provide the path to the "Job Mapping for Category template" CSV file.
    ```
    Auto-searches ~/Downloads if not provided
 
-2. **Category Selection**
+**Category Selection**
    ```
    Which category do you want to create/update?
    Available: What's new, Discover, Get started, Plan, Install, Upgrade, 
    Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, 
    Optimize, Extend, Troubleshoot, Reference, Download PDF
    ```
+   After selection, branch `builds-{category}-l2-topics` is created automatically.
 
-3. **File Verification**
+**File Verification**
    ```
    Missing files found:
    
@@ -85,13 +106,13 @@ Claude will then prompt you for:
    Do you want to create these files? (yes/no)
    ```
 
-4. **Creation & Reorganization**
+### 3. File Creation & Reorganization
    - Creates missing L1/L2/L3 files using docs-writer agent
    - Generates professional abstracts and descriptions
    - Reorganizes existing topics per CSV structure
    - Updates assembly include directives
 
-5. **Review Request**
+### 4. Review Request
    ```
    ✓ Files created: 12 total
    ✓ Files reorganized: 3 assemblies updated
@@ -202,6 +223,8 @@ The skill references these resources during execution to ensure JTBD compliance:
 ## Example Output
 
 ```
+✓ Branch created: builds-configure-l2-topics
+
 ✓ Files created:
   - 2 L1 assemblies
   - 5 L2 reference sections  
@@ -229,6 +252,9 @@ Next steps:
 ## Verification Commands
 
 ```bash
+# Verify you're on the correct branch
+git branch --show-current
+
 # Check created assemblies
 ls assemblies/builds-*.adoc
 
@@ -252,6 +278,8 @@ grep -r "include::modules" assemblies/
 
 ## Important Notes
 
+- **Creates branch automatically** - Pattern: `builds-{category-lowercase}-l2-topics`
+- **Run from docs repository** - Must be inside your documentation repo
 - **Never overwrites** existing files without confirmation
 - **Uses docs-writer agent** for professional content quality
 - **Follows JTBD guidelines** for titles and structure
