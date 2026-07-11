@@ -1,301 +1,201 @@
-# Create Jobs from JTBD Mapping
-
-A Claude Code skill to create and reorganize L1/L2/L3 job topics and assemblies from JTBD CSV mapping with docs-writer agent for Red Hat product documentation.
+# Create Jobs from JTBD Mapping - README
 
 ## Overview
-
-Automates the creation of missing documentation files (assemblies and modules) based on JTBD CSV mapping and reorganizes existing topics to match the Jobs-to-be-Done (JTBD) framework structure.
+A Claude Code skill that automates creation and reorganization of L1/L2/L3 job topics and assemblies from JTBD (Jobs-to-be-Done) CSV mapping for Red Hat product documentation. **Now includes automatic topicmap validation and registration** to prevent PR build failures.
 
 ## Prerequisites
+- Claude Code installed and configured
+- JTBD CSV mapping file (format: "Job Mapping for Category template.csv")
+- Red Hat product documentation repository cloned locally
+- Must be run from within the documentation repository
 
-- **Claude Code** installed and configured
-- **JTBD CSV mapping file** in format: `Job Mapping for Category template.csv`
-- **Red Hat product documentation repository** cloned locally
-- **Active in documentation repository** - Navigate to your docs repo before running the skill
+## Installation
 
-## Repository Structure
-
-**Before Installation:**
-- `create-jobs-skill/` - Clone repository
-- `.claude/skills/` - Contains skill workflow
-
-**After Installation:**
-- `~/.claude/skills/create-jobs/SKILL.md` - Global skill
-- Documentation projects ready for JTBD transformation
-
-## Installation Steps
-
-1. Clone repository:
-   ```bash
-   git clone https://github.com/shivanisathe25/create-jobs-skill.git
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/shivanisathe25/create-jobs-skill.git
+```
 
 2. Copy skill to Claude Code global skills:
-   ```bash
-   mkdir -p ~/.claude/skills/create-jobs
-   cp create-jobs-skill/.claude/skills/create-jobs/SKILL.md ~/.claude/skills/create-jobs/
-   ```
+```bash
+mkdir -p ~/.claude/skills/create-jobs
+cp create-jobs-skill/.claude/skills/create-jobs/SKILL.md ~/.claude/skills/create-jobs/
+```
 
 3. Verify installation:
-   ```bash
-   ls ~/.claude/skills/create-jobs/SKILL.md
-   ```
+```bash
+ls ~/.claude/skills/create-jobs/SKILL.md
+```
 
 ## Usage
 
-**Important**: Navigate to your documentation repository first:
+Navigate to your documentation repository first, then run:
 ```bash
 cd /path/to/your/docs-repo
-```
-
-Then run:
-```
 /create-jobs
 ```
 
-The skill will:
-1. **Create a new branch** automatically (e.g., `builds-configure-l2-topics`)
-2. **Prompt for CSV file path** - Job Mapping for Category template
-3. **Prompt for category name** - Which category to create/update
-4. **Generate and organize** all L1/L2/L3 files on the new branch
-
 ## Workflow
 
-### 1. Branch Creation (Automatic)
-
-The skill automatically creates a new branch based on the category:
-```bash
-git checkout -b builds-{category-lowercase}-l2-topics main
-```
-
-Examples:
-- Category "Configure" → `builds-configure-l2-topics`
-- Category "Secure" → `builds-secure-l2-topics`
-- Category "Develop" → `builds-develop-l2-topics`
+### 1. Automatic Branch Creation
+Creates branch based on category (e.g., `builds-configure-l2-topics`)
 
 ### 2. Interactive Prompts
+- CSV file path (auto-searches ~/Downloads)
+- Category selection from 15+ available categories
+- File verification and creation confirmation
 
-**CSV File Location**
-   ```
-   Please provide the path to the "Job Mapping for Category template" CSV file.
-   ```
-   Auto-searches ~/Downloads if not provided
+### 3. File Operations
+- Creates missing L1 (assemblies), L2 (reference sections), L3 (topic modules)
+- Uses docs-writer agent for professional content
+- Reorganizes existing topics per CSV structure
+- Updates assembly include directives
 
-**Category Selection**
-   ```
-   Which category do you want to create/update?
-   Available: What's new, Discover, Get started, Plan, Install, Upgrade, 
-   Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, 
-   Optimize, Extend, Troubleshoot, Reference, Download PDF
-   ```
-   After selection, branch `builds-{category}-l2-topics` is created automatically.
+### 4. **Topicmap Validation & Registration** (New!)
 
-**File Verification**
-   ```
-   Missing files found:
-   
-   L1 (Assemblies):
-   - assemblies/builds-configure.adoc
-   
-   L2 (Reference sections):
-   - modules/ob-configuration-options.adoc
-   
-   L3 (Topic modules):
-   - modules/proc-configure-ansible.adoc
-   
-   Do you want to create these files? (yes/no)
-   ```
+**Critical step that prevents PR build failures:**
 
-### 3. File Creation & Reorganization
-   - Creates missing L1/L2/L3 files using docs-writer agent
-   - Generates professional abstracts and descriptions
-   - Reorganizes existing topics per CSV structure
-   - Updates assembly include directives
+After creating files, the skill automatically:
+- ✅ Validates all new assemblies are registered in `_topic_maps/_topic_map.yml`
+- ✅ Detects missing categories
+- ✅ Inserts new categories in the correct order (before Troubleshooting)
+- ✅ Prompts for confirmation before updating topicmap
+- ✅ Validates YAML syntax
 
-### 4. Review Request
-   ```
-   ✓ Files created: 12 total
-   ✓ Files reorganized: 3 assemblies updated
-   
-   Please review the changes. Type 'yes' when ready to commit.
-   ```
+**Example validation output:**
+```
+Topicmap Validation:
 
-## What the Skill Does
+✓ Category "Configure" found in _topic_map.yml
+✓ Assembly "builds-configure" already registered
 
-### 1. Parse CSV and Check Files
-- Reads JTBD mapping CSV for specified category
-- Checks "Full .adoc filename path" column
-- Identifies missing L1 (assemblies), L2 (sections), L3 (topics)
+❌ Category "Reference" NOT found in _topic_map.yml
+   Need to add:
+   ---
+   Name: Reference
+   Dir: reference
+   Distros: openshift-builds
+   Topics:
+   - Name: API specifications and examples
+     File: reference-openshift-builds
 
-### 2. Create Missing Files
-Uses **docs-writer agent** to generate:
-- **L1 Assemblies** - Top-level job collections with outcome-based titles
-- **L2 Reference Sections** - Major groupings within assemblies  
-- **L3 Topic Modules** - Individual concept/procedure/reference modules
-
-All with:
-- Professional abstracts and descriptions
-- Correct AsciiDoc structure
-- JTBD-compliant titles (imperatives for procedures, noun phrases for concepts)
-- Proper metadata and context variables
-
-### 3. Reorganize Existing Topics
-- Reorders assembly include directives per CSV mapping
-- Adjusts leveloffset values (+1 for L2, +2 for L3)
-- Groups topics under correct L2 sections
-- Maintains all existing content
-
-## File Templates
-
-### L1 Assembly
-```asciidoc
-:_mod-docs-content-type: ASSEMBLY
-[id="assembly-id"]
-= Job Title
-
-include::_attributes/common-attributes.adoc[]
-:context: assembly-id
-
-toc::[]
-
-[role="_abstract"]
-2-3 sentence abstract explaining purpose and scope
-
-include::modules/ob-section-1.adoc[leveloffset=+1]
-include::modules/topic-1.adoc[leveloffset=+2]
+Would you like me to update _topic_map.yml? (yes/no)
 ```
 
-### L2 Reference Section
-```asciidoc
-:_mod-docs-content-type: REFERENCE
-[id="ob-section-id_{context}"]
-= Section Title
-
-[role="_abstract"]
-2-3 sentence abstract
-
-This section covers:
-* Topic 1
-* Topic 2
+**Topicmap entry format:**
+```yaml
+---
+Name: Reference                      # Display name
+Dir: reference                       # Filesystem directory
+Distros: openshift-builds           # Product distro
+Topics:
+- Name: API specifications and examples  # From assembly heading
+  File: reference-openshift-builds      # From assembly [id="..."]
 ```
 
-### L3 Topic Module
-```asciidoc
-:_mod-docs-content-type: CONCEPT|PROCEDURE|REFERENCE
-[id="module-id_{context}"]
-= Topic Title
+### 5. Review Process
+Displays created/reorganized files and waits for user review before committing
 
-[role="_abstract"]
-1-2 sentence description
+## File Structure
+
+**L1 Assemblies**: Top-level job collections with outcome-based titles
+
+**L2 Reference Sections**: Major groupings within assemblies
+
+**L3 Topic Modules**: Individual concept/procedure/reference modules
+
+All files include proper AsciiDoc structure, metadata, and JTBD-compliant titles.
+
+## Key Features
+- ✅ Never overwrites existing files without confirmation
+- ✅ Follows JTBD guidelines for titles and structure
+- ✅ Uses docs-writer agent for quality content generation
+- ✅ Preserves content when reorganizing topics
+- ✅ **Automatically validates and updates topicmap** (prevents build failures)
+- ✅ **Inserts categories in correct order** (Reference before Troubleshooting)
+- ✅ **Validates YAML syntax** before committing
+
+## Common Issues & Solutions
+
+### ❌ PR Build Failure: "Assembly not found in _topic_map.yml"
+
+**Symptom**: GitHub PR fails with:
+```
+Build failed: Assembly 'reference-openshift-builds' not found in _topic_map.yml
 ```
 
-## Resources Used by the Skill
+**Cause**: New assembly created but topicmap wasn't updated.
 
-The skill references these resources during execution to ensure JTBD compliance:
+**Solution**: The skill now **automatically detects and fixes this** in Step 4. If you encounter this error:
+1. Run `/create-jobs` again
+2. When prompted, confirm topicmap update
+3. The skill will add the missing entry in the correct location
 
-### 1. Product Documentation Categories (1).md
-- **Purpose**: Defines 15+ product documentation categories
-- **Content**: 
-  - Category definitions (What's new, Discover, Get started, Plan, Install, Upgrade, Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, Optimize, Extend, Troubleshoot, Reference, Download PDF)
-  - JTBD-aligned framing ("When I want to...")
-  - Content type mapping for each category
-- **Usage**: Guides category selection and content organization
+**Example from PR #115155**:
+- Created: `reference/reference-openshift-builds.adoc`
+- Missing: Entry in `_topic_maps/_topic_map.yml`
+- Fix: Skill now automatically adds the Reference category before Troubleshooting
 
-### 2. JTBD Consistency Guidelines.md
-- **Purpose**: Ensures consistent JTBD implementation across products
-- **Content**:
-  - Use case metadata and taxonomy values
-  - Heading style guidelines (imperatives vs gerunds)
-  - Navigation title best practices
-  - Outcome-based heading patterns
-  - Title formatting rules (avoid "About", "Understanding", etc.)
-- **Usage**: Enforces style and structure compliance in generated files
+### Manual Verification Commands
 
-### 3. Product Documentation Examples
-- **Purpose**: Reference implementation of JTBD structure
-- **Example**: [Red Hat Ansible Automation Platform 2.6](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/)
-- **Content**:
-  - Live examples of L1/L2/L3 structure
-  - Assembly and module organization
-  - AsciiDoc formatting patterns
-- **Usage**: Provides templates and patterns for file creation
-
-## Example Output
-
-```
-✓ Branch created: builds-configure-l2-topics
-
-✓ Files created:
-  - 2 L1 assemblies
-  - 5 L2 reference sections  
-  - 15 L3 topic modules
-
-✓ Files reorganized:
-  - 3 assemblies updated with new structure
-  - 12 topics moved to correct L2 sections
-
-Files ready for review:
-assemblies/builds-configure.adoc
-assemblies/builds-secure.adoc
-modules/ob-configuration-options.adoc
-modules/proc-configure-ansible.adoc
-...
-
-Next steps:
-1. Review abstracts and descriptions
-2. Verify file organization matches CSV
-3. Check include paths are correct
-4. Test documentation build
-5. Commit when satisfied
-```
-
-## Verification Commands
+After running the skill, you can verify topicmap updates:
 
 ```bash
-# Verify you're on the correct branch
-git branch --show-current
+# Check topicmap registration
+grep -A10 "^Name: Reference" _topic_maps/_topic_map.yml
+
+# Validate YAML syntax
+python3 -c "import yaml; yaml.safe_load_all(open('_topic_maps/_topic_map.yml'))"
 
 # Check created assemblies
 ls assemblies/builds-*.adoc
 
-# Check L2 sections
-ls modules/ob-*.adoc
-
-# Check L3 topics
-ls modules/{con,proc,ref}-*.adoc
-
-# Verify structure
+# Verify CSV mapping matches structure
 grep -r "include::modules" assemblies/
 ```
 
-## Troubleshooting
+## Category Placement Order
 
-- **CSV not found**: Provide explicit path or copy to ~/Downloads
-- **Category not in CSV**: Check spelling matches CSV exactly
-- **File already exists**: Skill skips without overwriting
-- **Build fails**: Verify include paths match created files
-- **Abstract quality**: Review docs-writer output, adjust if needed
+The skill inserts new categories in the standard Red Hat documentation order:
 
-## Important Notes
+```
+1. Release notes
+2. About {Product}
+3. Install
+4. Configure
+5. Work with {X}
+6. Authentication
+7. Observability
+8. Reference          ← New categories inserted here
+9. Troubleshooting
+10. Uninstall
+```
 
-- **Creates branch automatically** - Pattern: `builds-{category-lowercase}-l2-topics`
-- **Run from docs repository** - Must be inside your documentation repo
-- **Never overwrites** existing files without confirmation
-- **Uses docs-writer agent** for professional content quality
-- **Follows JTBD guidelines** for titles and structure
-- **Waits for review** before committing changes
-- **Preserves content** when reorganizing topics
+## Resources Referenced
+- Product Documentation Categories definitions
+- JTBD Consistency Guidelines
+- Red Hat Ansible Automation Platform documentation examples
+- OpenShift Builds topicmap structure
 
-## Related Resources
+## Recent Updates
 
-- [Red Hat Modular Documentation](https://redhat-documentation.github.io/modular-docs/)
-- [JTBD Framework Overview](https://jtbd.info/)
-- [Red Hat Ansible Automation Platform Documentation](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/)
+### v2.0 (July 2024)
+- ✨ **NEW**: Automatic topicmap validation and registration
+- ✨ **NEW**: Prevents PR build failures from missing topicmap entries
+- ✨ **NEW**: Correct category placement (Reference before Troubleshooting)
+- ✨ **NEW**: YAML syntax validation
+- 🐛 **FIX**: Addresses issue from PR #115155 (missing topicmap entries)
 
-## License
-
-MIT
+### v1.0 (Initial Release)
+- L1/L2/L3 file creation from JTBD CSV
+- docs-writer agent integration
+- Topic reorganization
 
 ## Author
+Created by Shivani Sathe for Red Hat documentation workflows
 
-Created by Shivani Sathe for Red Hat documentation workflows.
+## Contributing
+Issues and pull requests welcome at: https://github.com/shivanisathe25/create-jobs-skill
+
+## License
+MIT
