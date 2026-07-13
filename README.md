@@ -34,20 +34,3 @@ Navigate to your documentation repository first, then run:
 cd /path/to/your/docs-repo
 /create-jobs
 ```
-
-## Workflow
-
-### 1. Automatic Branch Creation
-Creates branch based on category (e.g., `builds-configure-l2-topics`)
-
-### 2. Interactive Prompts
-- CSV file path (auto-searches ~/Downloads)
-- Category selection from 15+ available categories
-- File verification and creation confirmation
-
-### 3. File Operations
-- Creates missing L1 (assemblies), L2 (reference sections), L3 (topic modules)
-- Uses docs-writer agent for professional content
-- Reorganizes existing topics per CSV structure
-- Updates assembly include directives
-
