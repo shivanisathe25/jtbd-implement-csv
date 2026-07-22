@@ -1,201 +1,429 @@
-# Create Jobs from JTBD Mapping - README
+# jtbd-implement-csv
 
 ## Overview
-A Claude Code skill that automates creation and reorganization of L1/L2/L3 job topics and assemblies from JTBD (Jobs-to-be-Done) CSV mapping for Red Hat product documentation. **Now includes automatic topicmap validation and registration** to prevent PR build failures.
+
+A Claude Code skill that updates existing JTBD (Jobs-to-be-Done) titles in Red Hat product documentation from CSV mapping files. Handles batch processing, title validation, cross-reference updates, and topicmap synchronization with staged user confirmations.
+
+## What It Does
+
+✅ **Title Updates:**
+- Updates L1/L2/L3 titles in existing AsciiDoc files from CSV
+- Validates title formats (CONCEPT, PROCEDURE, REFERENCE)
+- Suggests corrections for invalid formats
+- Batch processes multiple categories at once
+
+✅ **Cross-Reference Updates:**
+- Updates xref display text to match new titles
+- Preserves anchor IDs (keeps `[id="..."]` unchanged)
+- Skips custom display text
+- Staged confirmation with review mode
+
+✅ **Topicmap Synchronization:**
+- Auto-updates `_topic_maps/_topic_map.yml` with new assembly titles
+- Validates YAML syntax
+- Staged confirmation with review mode
+
+✅ **Missing File Creation:**
+- Detects files referenced in CSV but missing from repo
+- Creates them via docs-writer agent
+- Prompts for user confirmation
+
+## What It Does NOT Do
+
+❌ Change filenames  
+❌ Change anchor IDs  
+❌ Update external references outside the repo  
+❌ Overwrite content (only updates titles and structure)
 
 ## Prerequisites
+
 - Claude Code installed and configured
 - JTBD CSV mapping file (format: "Job Mapping for Category template.csv")
 - Red Hat product documentation repository cloned locally
-- Must be run from within the documentation repository
+- Python 3.11+ with `uv` installed (for script execution)
 
 ## Installation
 
-1. Clone the repository:
+1. Clone this repository:
 ```bash
 git clone https://github.com/shivanisathe25/create-jobs-skill.git
+cd create-jobs-skill
 ```
 
-2. Copy skill to Claude Code global skills:
+2. Copy skill to Claude Code global skills directory:
 ```bash
-mkdir -p ~/.claude/skills/create-jobs
-cp create-jobs-skill/.claude/skills/create-jobs/SKILL.md ~/.claude/skills/create-jobs/
+mkdir -p ~/.claude/skills/jtbd-implement-csv
+cp -r .claude/skills/jtbd-implement-csv/* ~/.claude/skills/jtbd-implement-csv/
 ```
 
 3. Verify installation:
 ```bash
-ls ~/.claude/skills/create-jobs/SKILL.md
+ls ~/.claude/skills/jtbd-implement-csv/SKILL.md
+ls ~/.claude/skills/jtbd-implement-csv/scripts/parse_csv.py
 ```
 
 ## Usage
 
-Navigate to your documentation repository first, then run:
+Navigate to your documentation repository, then run:
+
 ```bash
 cd /path/to/your/docs-repo
-/create-jobs
+/jtbd-implement-csv
 ```
 
-## Workflow
+The skill will prompt you for:
+1. **CSV file path** (or auto-search ~/Downloads)
+2. **Category selection** (single, multiple, or "all")
+3. **Missing file creation** (yes/no/cancel)
+4. **Xref updates** (yes/review/skip)
+5. **Topicmap updates** (yes/review/skip)
 
-### 1. Automatic Branch Creation
-Creates branch based on category (e.g., `builds-configure-l2-topics`)
+## Example Session
 
-### 2. Interactive Prompts
-- CSV file path (auto-searches ~/Downloads)
-- Category selection from 15+ available categories
-- File verification and creation confirmation
-
-### 3. File Operations
-- Creates missing L1 (assemblies), L2 (reference sections), L3 (topic modules)
-- Uses docs-writer agent for professional content
-- Reorganizes existing topics per CSV structure
-- Updates assembly include directives
-
-### 4. **Topicmap Validation & Registration** (New!)
-
-**Critical step that prevents PR build failures:**
-
-After creating files, the skill automatically:
-- ✅ Validates all new assemblies are registered in `_topic_maps/_topic_map.yml`
-- ✅ Detects missing categories
-- ✅ Inserts new categories in the correct order (before Troubleshooting)
-- ✅ Prompts for confirmation before updating topicmap
-- ✅ Validates YAML syntax
-
-**Example validation output:**
 ```
-Topicmap Validation:
+User: /jtbd-implement-csv
 
-✓ Category "Configure" found in _topic_map.yml
-✓ Assembly "builds-configure" already registered
+Claude: Please provide the path to the CSV file.
+User: ~/Downloads/Job Mapping for Category template.csv
 
-❌ Category "Reference" NOT found in _topic_map.yml
-   Need to add:
-   ---
-   Name: Reference
-   Dir: reference
-   Distros: openshift-builds
-   Topics:
-   - Name: API specifications and examples
-     File: reference-openshift-builds
+Claude: Which category titles do you want to update?
+        Options:
+        - Enter one category (e.g., "What's new")
+        - Enter multiple (e.g., "What's new, Discover, Plan")
+        - Type "all" for batch mode
+User: What's new, Discover
 
-Would you like me to update _topic_map.yml? (yes/no)
+Claude: Files found for categories: What's new, Discover
+
+        ✓ Files to update: 5
+        ❌ Missing files: 2
+
+        Title comparison from CSV:
+
+        | File | Current Title | CSV Title | Level | Validation | Needs Update? |
+        |------|--------------|-----------|-------|-----------|---------------|
+        | assemblies/builds-release-notes.adoc | "Builds release notes" | "Review release updates to plan cluster upgrades" | L1 | ✓ Valid | ✓ YES |
+        | modules/proc-setup.adoc | "Setting up builds" | "Setup builds" | L3 | ⚠️ Should be "Set up builds" | ✓ YES |
+
+        Missing files detected: 2
+          - modules/con-security-model.adoc (L3 CONCEPT) - "Security model overview"
+          - modules/ref-api-endpoints.adoc (L3 REFERENCE) - "API endpoint reference"
+
+        Create missing files? (yes/no/cancel)
+User: yes
+
+Claude: [Spawns docs-writer agents, creates files]
+
+        Updating titles...
+        ✓ 5 titles updated (2 with suggested corrections applied)
+
+        Update xref display text? (yes/review/skip)
+User: review
+
+Claude: Found 8 cross-references to update:
+
+        assemblies/overview.adoc:
+          xref:builds-release-notes_{context}[Builds release notes]
+          → xref:builds-release-notes_{context}[Review release updates to plan cluster upgrades]
+
+        [... 7 more xrefs ...]
+
+        Apply these xref updates? (yes/no)
+User: yes
+
+Claude: ✓ 8 xrefs updated
+
+        Update topicmap? (yes/review/skip)
+User: yes
+
+Claude: ✓ 1 topicmap entry updated
+        ✓ YAML validation passed
+
+        ✓ Implementation Complete
+
+        Titles updated: 5
+          - assemblies/builds-release-notes.adoc (L1)
+          - modules/proc-setup.adoc (L3)
+          - modules/con-security.adoc (L3)
+          - modules/ref-config.adoc (L3)
+          - modules/proc-install.adoc (L3)
+
+        Cross-references updated: 8
+          - 3 xrefs in assemblies/overview.adoc
+          - 5 xrefs across 3 other files
+
+        Topicmap entries updated: 1
+          - _topic_maps/_topic_map.yml (1 assembly name)
+
+        Files created: 2
+          - modules/con-security-model.adoc (L3 CONCEPT)
+          - modules/ref-api-endpoints.adoc (L3 REFERENCE)
+
+        Next steps:
+        1. Review: git diff
+        2. Test documentation build
+        3. Commit when satisfied
 ```
 
-**Topicmap entry format:**
+## Workflow Details
+
+### 1. CSV Analysis (Python Script)
+
+The skill uses `scripts/parse_csv.py` (PEP 723) to:
+- Parse CSV and extract L1/L2/L3 titles
+- Compare with current titles in files
+- Validate title formats against content types
+- Detect missing files
+- Output structured JSON
+
+**Invocation:**
+```bash
+uv run --script scripts/parse_csv.py <csv_path> <repo_root> [categories]
+```
+
+**JSON Output:**
+```json
+{
+  "categories": ["What's new", "Discover", ...],
+  "files": [
+    {
+      "path": "assemblies/builds.adoc",
+      "current_title": "Configure Builds",
+      "csv_title": "Configure build settings and pipelines",
+      "level": "L1",
+      "content_type": "ASSEMBLY",
+      "needs_update": true,
+      "validation": {
+        "valid": true,
+        "message": "Valid format",
+        "suggestion": null
+      }
+    }
+  ],
+  "missing_files": [...]
+}
+```
+
+### 2. Title Format Validation
+
+| Content Type | Expected Format | ✅ Valid Example | ❌ Invalid Example |
+|--------------|----------------|------------------|-------------------|
+| **CONCEPT** | Noun phrase | "Security model overview" | "Configuring security" |
+| **PROCEDURE** | Imperative verb | "Configure authentication" | "Configuration of authentication" |
+| **REFERENCE** | Noun form | "API endpoint reference" | "Referencing API endpoints" |
+
+Invalid titles trigger a validation warning with suggested corrections.
+
+### 3. Staged Confirmations
+
+User is prompted before:
+1. **Creating missing files** → yes/no/cancel
+2. **Updating cross-references** → yes/review/skip
+3. **Updating topicmap** → yes/review/skip
+
+**Review mode** shows all changes before applying.
+
+### 4. Cross-Reference Updates
+
+Updates only display text in `[...]`, preserves IDs:
+
+```asciidoc
+// Before
+See xref:config-options_{context}[Configuration options] for details.
+
+// After
+See xref:config-options_{context}[Build configuration reference] for details.
+```
+
+**Rules:**
+- Updates display text matching old title
+- Skips custom display text
+- Skips commented-out xrefs
+- Keeps anchor IDs unchanged
+
+### 5. Topicmap Updates
+
+Updates assembly `Name:` fields in `_topic_maps/_topic_map.yml`:
+
 ```yaml
----
-Name: Reference                      # Display name
-Dir: reference                       # Filesystem directory
-Distros: openshift-builds           # Product distro
+# Before
 Topics:
-- Name: API specifications and examples  # From assembly heading
-  File: reference-openshift-builds      # From assembly [id="..."]
+- Name: Builds release notes
+  File: builds-release-notes
+
+# After
+Topics:
+- Name: Review release updates to plan cluster upgrades
+  File: builds-release-notes
 ```
 
-### 5. Review Process
-Displays created/reorganized files and waits for user review before committing
+Validates YAML syntax after updates.
 
-## File Structure
+## Technical Implementation
 
-**L1 Assemblies**: Top-level job collections with outcome-based titles
+### Architecture
 
-**L2 Reference Sections**: Major groupings within assemblies
+**Python Script (PEP 723):**
+- `scripts/parse_csv.py` - CSV parsing, validation, diff generation
+- Uses Python stdlib only (csv, json, os, pathlib, typing)
+- Outputs structured JSON to stdout
+- No external dependencies
 
-**L3 Topic Modules**: Individual concept/procedure/reference modules
+**SKILL.md (Orchestration):**
+- Invokes Python script via `uv run --script`
+- Parses JSON output
+- Handles user interaction (prompts, confirmations)
+- Performs file updates (titles, xrefs, topicmap)
+- Spawns docs-writer agent for missing files
+- No inline conditionals (logic in Python script)
 
-All files include proper AsciiDoc structure, metadata, and JTBD-compliant titles.
+### Design Principles
+
+1. **Separation of concerns:** Procedural logic in Python, orchestration in SKILL.md
+2. **Structured interface:** JSON contract between script and skill
+3. **User control:** Staged confirmations for sensitive operations
+4. **Validation first:** Check before update, suggest corrections
+5. **No destructive actions:** Preserve content, only update titles
+
+## CSV Format
+
+The skill expects a CSV with these columns:
+
+- `Category` - JTBD category name (e.g., "What's new", "Discover")
+- `L1 Job Title` - Assembly-level title
+- `L2 Section Title` - Section heading title
+- `L3 Topic Title` - Module-level title
+- `Full .adoc filename path` - Relative path from repo root (e.g., `modules/proc-setup.adoc`)
+- `Content Type` - CONCEPT, PROCEDURE, or REFERENCE
+
+**Example:**
+```csv
+Category,L1 Job Title,L2 Section Title,L3 Topic Title,Full .adoc filename path,Content Type
+What's new,Review release updates,,,assemblies/release-notes.adoc,ASSEMBLY
+What's new,,,Release notes for version 1.0,modules/rn-1-0.adoc,CONCEPT
+Discover,,,Security model overview,modules/con-security.adoc,CONCEPT
+```
 
 ## Key Features
-- ✅ Never overwrites existing files without confirmation
-- ✅ Follows JTBD guidelines for titles and structure
-- ✅ Uses docs-writer agent for quality content generation
-- ✅ Preserves content when reorganizing topics
-- ✅ **Automatically validates and updates topicmap** (prevents build failures)
-- ✅ **Inserts categories in correct order** (Reference before Troubleshooting)
-- ✅ **Validates YAML syntax** before committing
 
-## Common Issues & Solutions
+- ✅ **Batch processing** - Multiple categories in one run
+- ✅ **Title validation** - Format checking with suggestions
+- ✅ **Staged confirmations** - User control before xref/topicmap updates
+- ✅ **Review mode** - Preview changes before applying
+- ✅ **Missing file creation** - Via docs-writer agent
+- ✅ **YAML validation** - Prevents topicmap syntax errors
+- ✅ **No destructive actions** - Preserves all content and IDs
+- ✅ **PEP 723 compliance** - Self-contained Python script
+- ✅ **No external dependencies** - Uses Python stdlib only
 
-### ❌ PR Build Failure: "Assembly not found in _topic_map.yml"
+## Documentation
 
-**Symptom**: GitHub PR fails with:
-```
-Build failed: Assembly 'reference-openshift-builds' not found in _topic_map.yml
-```
+- **SKILL.md** - Complete workflow documentation
+- **QUICKSTART.md** - One-page reference guide
+- **EXAMPLE.md** - Step-by-step walkthrough
+- **IMPLEMENTATION.md** - Design decisions & rationale
+- **scripts/README.md** - Script API & JSON schema
+- **REVIEW_CHECKLIST.md** - Quality assurance checklist
 
-**Cause**: New assembly created but topicmap wasn't updated.
+## Verification Commands
 
-**Solution**: The skill now **automatically detects and fixes this** in Step 4. If you encounter this error:
-1. Run `/create-jobs` again
-2. When prompted, confirm topicmap update
-3. The skill will add the missing entry in the correct location
-
-**Example from PR #115155**:
-- Created: `reference/reference-openshift-builds.adoc`
-- Missing: Entry in `_topic_maps/_topic_map.yml`
-- Fix: Skill now automatically adds the Reference category before Troubleshooting
-
-### Manual Verification Commands
-
-After running the skill, you can verify topicmap updates:
+After running the skill:
 
 ```bash
-# Check topicmap registration
-grep -A10 "^Name: Reference" _topic_maps/_topic_map.yml
+# Review all changes
+git diff
 
-# Validate YAML syntax
+# Check updated titles
+grep "^= " assemblies/*.adoc modules/*.adoc
+
+# Verify xref updates
+grep -r "xref:" --include="*.adoc" | grep -i "build"
+
+# Validate topicmap YAML
 python3 -c "import yaml; yaml.safe_load_all(open('_topic_maps/_topic_map.yml'))"
 
-# Check created assemblies
-ls assemblies/builds-*.adoc
-
-# Verify CSV mapping matches structure
-grep -r "include::modules" assemblies/
+# Test documentation build
+./build.sh  # or your build command
 ```
 
-## Category Placement Order
+## Troubleshooting
 
-The skill inserts new categories in the standard Red Hat documentation order:
+**CSV not found**  
+→ Provide explicit path or copy to ~/Downloads
 
-```
-1. Release notes
-2. About {Product}
-3. Install
-4. Configure
-5. Work with {X}
-6. Authentication
-7. Observability
-8. Reference          ← New categories inserted here
-9. Troubleshooting
-10. Uninstall
-```
+**Category not in CSV**  
+→ Check spelling matches CSV exactly (case-sensitive)
+
+**Title validation warning**  
+→ Choose option 1 to apply suggested correction
+
+**YAML syntax error after topicmap update**  
+→ Check indentation, script validates before writing
+
+**Xref not updated**  
+→ Custom display text is intentionally skipped
+
+**Script execution error**  
+→ Ensure `uv` is installed: `pip install uv`
+
+## Related Skills
+
+This skill is part of the jtbd-tools suite. Related skills:
+- **jtbd-implement-decisions** - Interactive resolution of REC-N recommendations
+- **jtbd-header-rewriter** - Single module title updates (no CSV, no batch)
+
+**No overlap** - Each skill handles a different workflow.
+
+## Contributing
+
+Issues and pull requests welcome!
+
+**For bug reports:**
+- Include CSV structure (sanitized)
+- Attach error messages
+- Provide repo structure context
+
+**For feature requests:**
+- Describe use case
+- Expected vs actual behavior
+- Impact on workflow
 
 ## Resources Referenced
-- Product Documentation Categories definitions
+
+- Red Hat SSG Title Guidelines
+- IBM Style Guide (procedure/concept/reference formats)
 - JTBD Consistency Guidelines
-- Red Hat Ansible Automation Platform documentation examples
+- Red Hat Modular Documentation template
 - OpenShift Builds topicmap structure
 
 ## Recent Updates
 
-### v2.0 (July 2024)
-- ✨ **NEW**: Automatic topicmap validation and registration
-- ✨ **NEW**: Prevents PR build failures from missing topicmap entries
-- ✨ **NEW**: Correct category placement (Reference before Troubleshooting)
-- ✨ **NEW**: YAML syntax validation
-- 🐛 **FIX**: Addresses issue from PR #115155 (missing topicmap entries)
+### v3.0 (July 2024) - jtbd-implement-csv
 
-### v1.0 (Initial Release)
+- ✨ **NEW**: Refactored to follow project conventions
+- ✨ **NEW**: Python script for CSV parsing (PEP 723)
+- ✨ **NEW**: Structured JSON interface
+- ✨ **NEW**: Staged confirmations for xref and topicmap updates
+- ✨ **NEW**: Review mode (preview changes before applying)
+- ✨ **NEW**: Title format validation with suggestions
+- ✨ **NEW**: Batch processing for multiple categories
+- ✨ **NEW**: Missing file detection and creation
+- 🐛 **FIX**: No inline conditionals in SKILL.md
+- 🐛 **FIX**: Separation of procedural logic (script) and orchestration (skill)
+
+### v2.0 (July 2024) - create-jobs (deprecated)
+
+- Automatic topicmap validation and registration
+- Prevents PR build failures from missing topicmap entries
+
+### v1.0 (Initial Release) - create-jobs (deprecated)
+
 - L1/L2/L3 file creation from JTBD CSV
-- docs-writer agent integration
-- Topic reorganization
 
 ## Author
+
 Created by Shivani Sathe for Red Hat documentation workflows
 
-## Contributing
-Issues and pull requests welcome at: https://github.com/shivanisathe25/create-jobs-skill
-
 ## License
+
 MIT
