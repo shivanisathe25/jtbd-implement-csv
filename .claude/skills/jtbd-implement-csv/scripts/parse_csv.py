@@ -36,12 +36,17 @@ def read_csv_mapping(csv_path: str) -> List[Dict]:
         # Read all lines to find the actual header row
         lines = list(csv.reader(f))
 
-        # Find the row that contains 'Category' (the actual header)
+        # Find the row that contains 'Category' or 'Category (L!)' as first column (the actual header)
+        # Look for row where first column starts with 'Category' and has other job-related columns
         header_idx = None
         for idx, line in enumerate(lines):
-            if line and 'Category' in line:
-                header_idx = idx
-                break
+            if line and len(line) > 0:
+                first_col = line[0].strip()
+                if first_col.startswith('Category') and len(line) > 3:
+                    # Verify it's the header by checking for job-related columns
+                    if any('Level' in str(cell) or 'Jobs' in str(cell) for cell in line[1:4]):
+                        header_idx = idx
+                        break
 
         if header_idx is None:
             return mappings  # No valid header found
@@ -49,6 +54,9 @@ def read_csv_mapping(csv_path: str) -> List[Dict]:
         # Use the found header row
         headers = lines[header_idx]
         data_rows = lines[header_idx + 1:]
+
+        # Track current category for grouped format (where category appears once per section)
+        current_category = None
 
         # Create a DictReader-like structure
         for row_data in data_rows:
@@ -63,6 +71,15 @@ def read_csv_mapping(csv_path: str) -> List[Dict]:
 
             # Support both column name formats
             category = row.get('Category', '').strip()
+            if not category:
+                category = row.get('Category (L!)', '').strip()
+
+            # If category is present, update current_category (grouped format)
+            if category:
+                current_category = category
+            else:
+                # Use the last seen category for rows without category
+                category = current_category if current_category else ''
 
             # L1 - try both formats
             l1_job = row.get('L1 Job Title', '').strip()
