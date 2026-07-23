@@ -22,23 +22,90 @@ from typing import Dict, List, Optional
 
 
 def read_csv_mapping(csv_path: str) -> List[Dict]:
-    """Read CSV and extract job mappings."""
+    """Read CSV and extract job mappings.
+
+    Supports two column name formats:
+    Format 1: L1 Job Title, L2 Section Title, L3 Topic Title, Content Type
+    Format 2: Level 1 (Jobs), Level 2 (Jobs), Level 3 (Jobs or Topics), Topic (H2)
+
+    Handles CSVs with instruction/header rows by finding the row with 'Category' column.
+    """
     mappings = []
 
     with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
+        # Read all lines to find the actual header row
+        lines = list(csv.reader(f))
+
+        # Find the row that contains 'Category' (the actual header)
+        header_idx = None
+        for idx, line in enumerate(lines):
+            if line and 'Category' in line:
+                header_idx = idx
+                break
+
+        if header_idx is None:
+            return mappings  # No valid header found
+
+        # Use the found header row
+        headers = lines[header_idx]
+        data_rows = lines[header_idx + 1:]
+
+        # Create a DictReader-like structure
+        for row_data in data_rows:
+            if len(row_data) < len(headers):
+                # Pad short rows with empty strings
+                row_data.extend([''] * (len(headers) - len(row_data)))
+            row = dict(zip(headers, row_data))
+
             # Skip empty rows
             if not any(row.values()):
                 continue
 
+            # Support both column name formats
+            category = row.get('Category', '').strip()
+
+            # L1 - try both formats
+            l1_job = row.get('L1 Job Title', '').strip()
+            if not l1_job:
+                l1_job = row.get('Level 1 (Jobs)', '').strip()
+
+            # L2 - try both formats
+            l2_section = row.get('L2 Section Title', '').strip()
+            if not l2_section:
+                l2_section = row.get('Level 2 (Jobs)', '').strip()
+
+            # L3 - try both formats
+            l3_topic = row.get('L3 Topic Title', '').strip()
+            if not l3_topic:
+                l3_topic = row.get('Level 3 (Jobs or Topics)', '').strip()
+            if not l3_topic:
+                l3_topic = row.get('Topic (H2)', '').strip()
+
+            # File path
+            file_path = row.get('Full .adoc filename path', '').strip()
+
+            # Content Type - try both formats
+            content_type = row.get('Content Type', '').strip().upper()
+            if not content_type:
+                # Infer from file path if not provided
+                if file_path.startswith('assemblies/'):
+                    content_type = 'ASSEMBLY'
+                elif 'proc-' in file_path or 'procedure' in file_path.lower():
+                    content_type = 'PROCEDURE'
+                elif 'con-' in file_path or 'concept' in file_path.lower():
+                    content_type = 'CONCEPT'
+                elif 'ref-' in file_path or 'reference' in file_path.lower():
+                    content_type = 'REFERENCE'
+                else:
+                    content_type = 'CONCEPT'  # default
+
             mappings.append({
-                'category': row.get('Category', '').strip(),
-                'l1_job': row.get('L1 Job Title', '').strip(),
-                'l2_section': row.get('L2 Section Title', '').strip(),
-                'l3_topic': row.get('L3 Topic Title', '').strip(),
-                'file_path': row.get('Full .adoc filename path', '').strip(),
-                'content_type': row.get('Content Type', '').strip().upper(),
+                'category': category,
+                'l1_job': l1_job,
+                'l2_section': l2_section,
+                'l3_topic': l3_topic,
+                'file_path': file_path,
+                'content_type': content_type,
             })
 
     return mappings
