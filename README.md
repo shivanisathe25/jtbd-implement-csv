@@ -46,14 +46,14 @@ Overwrite content (only updates titles and structure)
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/shivanisathe25/create-jobs-skill.git
-cd create-jobs-skill
+git clone https://github.com/shivanisathe25/jtbd-implement-csv.git
+cd jtbd-implement-csv
 ```
 
 2. Copy skill to Claude Code global skills directory:
 ```bash
 mkdir -p ~/.claude/skills/jtbd-implement-csv
-cp -r .claude/skills/jtbd-implement-csv/* ~/.claude/skills/jtbd-implement-csv/
+cp -r jtbd-implement-csv/.claude/skills/jtbd-implement-csv/* ~/.claude/skills/jtbd-implement-csv/
 ```
 
 3. Verify installation:
